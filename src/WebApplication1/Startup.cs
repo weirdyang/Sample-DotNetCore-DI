@@ -5,6 +5,7 @@ using Microsoft.AspNetCore.Builder;
 using Microsoft.AspNetCore.Hosting;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Hosting;
+using Microsoft.Extensions.Logging;
 
 namespace WebApplication1
 {
@@ -21,7 +22,7 @@ namespace WebApplication1
 
             services.AddMassTransit(x =>
             {
-                // add the consumer, for LoadFrom
+                // add the consumer to the container
                 x.AddConsumer<DoSomethingConsumer>();
             });
 
@@ -29,12 +30,14 @@ namespace WebApplication1
             {
                 var host = cfg.Host("localhost", "/", h => { });
 
+                cfg.UseExtensionsLogging(provider.GetService<ILoggerFactory>());
+
                 cfg.ReceiveEndpoint(host, "web-service-endpoint", e =>
                 {
                     e.PrefetchCount = 16;
                     e.UseMessageRetry(x => x.Interval(2, 100));
 
-                    e.LoadFrom(provider);
+                    e.Consumer<DoSomethingConsumer>(provider);
 
                     EndpointConvention.Map<DoSomething>(e.InputAddress);
                 });
